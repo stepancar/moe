@@ -52,13 +52,19 @@
 	};
 	var React = __webpack_require__(1);
 	var react_dom_1 = __webpack_require__(158);
+	var sparqlJson_1 = __webpack_require__(159);
+	var endpoint = 'http://dbpedia.org/sparql';
+	var query = "SELECT * WHERE {?uri geo:lat ?lat .?uri geo:long ?lon .?uri rdf:type ?thetype .FILTER ( (?lat> 40.0  && ?lat < 41.15) &&(?lon> -3  && ?lon < 4)&& regex(?thetype,'^http://schema.org'))}";
+	sparqlJson_1.sparqlQueryJson(endpoint, query, function (data) {
+	    console.log(data);
+	});
 	var Root = (function (_super) {
 	    __extends(Root, _super);
 	    function Root() {
 	        _super.apply(this, arguments);
 	    }
 	    Root.prototype.render = function () {
-	        return (React.createElement("div", null, "Hello"));
+	        return (React.createElement("div", null));
 	    };
 	    return Root;
 	}(React.Component));
@@ -19664,6 +19670,36 @@
 	'use strict';
 
 	module.exports = __webpack_require__(3);
+
+
+/***/ },
+/* 159 */
+/***/ function(module, exports) {
+
+	"use strict";
+	function sparqlQueryJson(endpoint, query, callback) {
+	    var querypart = "query=" + encodeURIComponent(query);
+	    var xmlhttp = null;
+	    if (window.XMLHttpRequest) {
+	        xmlhttp = new XMLHttpRequest();
+	    }
+	    else if (window.ActiveXObject) {
+	        xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+	    }
+	    xmlhttp.open('POST', endpoint, true);
+	    xmlhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+	    xmlhttp.setRequestHeader("Accept", "application/sparql-results+json");
+	    xmlhttp.onreadystatechange = function () {
+	        if (xmlhttp.readyState == 4) {
+	            if (xmlhttp.status == 200) {
+	                callback(xmlhttp.responseText);
+	            }
+	        }
+	    };
+	    xmlhttp.send(querypart);
+	}
+	exports.sparqlQueryJson = sparqlQueryJson;
+	;
 
 
 /***/ }

@@ -23,6 +23,8 @@
     "compileOnSave": true,
     "buildOnSave": false,
     "files": [
+        "src/sparql.ts",
+        "src/sparqlJson.ts",
         "typings/react/react-dom.d.ts",
         "typings/react/react.d.ts",
         "typings/tsd.d.ts",
