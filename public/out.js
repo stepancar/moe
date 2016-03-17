@@ -55,6 +55,14 @@
 	var sparqlJson_1 = __webpack_require__(159);
 	var queries_1 = __webpack_require__(160);
 	var endpoint = 'http://query.wikidata.org/bigdata/namespace/wdq/sparql';
+	window.ymaps.ready(init);
+	var myMap;
+	function init() {
+	    myMap = new window.ymaps.Map("map", {
+	        center: [55.76, 37.64],
+	        zoom: 3
+	    });
+	}
 	var Root = (function (_super) {
 	    __extends(Root, _super);
 	    function Root() {
@@ -65,6 +73,17 @@
 	        var query = queries_1.birthPlaceForOccupation(this.state.occupation);
 	        sparqlJson_1.sparqlQueryJson(endpoint, query, function (data) {
 	            console.log(data);
+	            for (var _i = 0, _a = JSON.parse(data).results.bindings; _i < _a.length; _i++) {
+	                var hum = _a[_i];
+	                var coords = hum.coord.value.replace('Point(', '').replace(')', '').split(' ').map(function (val) { return parseFloat(val); });
+	                var myPlacemark = new window.ymaps.GeoObject({
+	                    geometry: {
+	                        type: "Point",
+	                        coordinates: coords
+	                    }
+	                });
+	                myMap.geoObjects.add(myPlacemark);
+	            }
 	        });
 	    };
 	    Root.prototype.onInputChangeHandler = function (newVal) {
@@ -74,7 +93,7 @@
 	    };
 	    Root.prototype.render = function () {
 	        var _this = this;
-	        return (React.createElement("div", null, React.createElement("input", {value: this.state.occupation, onChange: function (e) { return _this.onInputChangeHandler(e.target.value); }}), React.createElement("button", {onClick: function () { return _this.search(); }})));
+	        return (React.createElement("div", null, React.createElement("h3", null, "Write occupation"), React.createElement("input", {value: this.state.occupation, onChange: function (e) { return _this.onInputChangeHandler(e.target.value); }}), React.createElement("button", {onClick: function () { return _this.search(); }}, " Search")));
 	    };
 	    return Root;
 	}(React.Component));
@@ -19696,7 +19715,7 @@
 	    else if (window.ActiveXObject) {
 	        xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
 	    }
-	    xmlhttp.open('POST', endpoint, true);
+	    xmlhttp.open('GET', endpoint + "?" + querypart, true);
 	    xmlhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
 	    xmlhttp.setRequestHeader("Accept", "application/sparql-results+json");
 	    xmlhttp.onreadystatechange = function () {
@@ -19706,7 +19725,7 @@
 	            }
 	        }
 	    };
-	    xmlhttp.send(querypart);
+	    xmlhttp.send();
 	}
 	exports.sparqlQueryJson = sparqlQueryJson;
 	;
@@ -19725,7 +19744,7 @@
 	        "PREFIX v: <http://www.wikidata.org/prop/statement/>\n" +
 	        "PREFIX q: <http://www.wikidata.org/prop/qualifier/>\n" +
 	        "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n" +
-	        ("\n        SELECT ?label ?coord ?place ?occupationLabel ?occupation ?picture WHERE {\n           ?subj wdt:P106 ?occupation .\n           ?occupation rdfs:label ?occupationLabel filter (lang(?occupationLabel) = \"en\") .\n           FILTER(STRSTARTS(?occupationLabel, '" + occupation + "')) .\n           ?subj wdt:P19 ?place .\n           ?place wdt:P625 ?coord .\n           ?subj wdt:P18 ?picture .\n           ?subj rdfs:label ?label filter (lang(?label) = \"en\")\n        }\n        LIMIT 10"));
+	        ("\n        SELECT ?label ?coord ?place ?occupationLabel ?occupation ?picture WHERE {\n           ?subj wdt:P106 ?occupation .\n           ?occupation rdfs:label ?occupationLabel filter (lang(?occupationLabel) = \"en\") .\n           FILTER(STRSTARTS(?occupationLabel, '" + occupation + "')) .\n           ?subj wdt:P19 ?place .\n           ?place wdt:P625 ?coord .\n           ?subj wdt:P18 ?picture .\n           ?subj rdfs:label ?label filter (lang(?label) = \"en\")\n        }\n        LIMIT 20"));
 	}
 	exports.birthPlaceForOccupation = birthPlaceForOccupation;
 

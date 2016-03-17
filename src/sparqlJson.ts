@@ -6,7 +6,7 @@ export function sparqlQueryJson(endpoint: string, query: string, callback: (any)
     } else if ((window as any).ActiveXObject) {
         xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
     }
-    xmlhttp.open('POST', endpoint, true);
+    xmlhttp.open('GET', endpoint + "?" + querypart, true);
     xmlhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
     xmlhttp.setRequestHeader("Accept", "application/sparql-results+json");
     xmlhttp.onreadystatechange = function() {
@@ -16,5 +16,5 @@ export function sparqlQueryJson(endpoint: string, query: string, callback: (any)
             }
         }
     };
-    xmlhttp.send(querypart);
+    xmlhttp.send(/*querypart*/);
 };

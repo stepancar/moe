@@ -18,6 +18,6 @@ export function birthPlaceForOccupation(occupation: string) {
            ?subj wdt:P18 ?picture .
            ?subj rdfs:label ?label filter (lang(?label) = "en")
         }
-        LIMIT 10`
+        LIMIT 20`
     );
 }
