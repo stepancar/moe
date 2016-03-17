@@ -53,18 +53,28 @@
 	var React = __webpack_require__(1);
 	var react_dom_1 = __webpack_require__(158);
 	var sparqlJson_1 = __webpack_require__(159);
-	var endpoint = 'http://dbpedia.org/sparql';
-	var query = "SELECT * WHERE {?uri geo:lat ?lat .?uri geo:long ?lon .?uri rdf:type ?thetype .FILTER ( (?lat> 40.0  && ?lat < 41.15) &&(?lon> -3  && ?lon < 4)&& regex(?thetype,'^http://schema.org'))}";
-	sparqlJson_1.sparqlQueryJson(endpoint, query, function (data) {
-	    console.log(data);
-	});
+	var queries_1 = __webpack_require__(160);
+	var endpoint = 'http://query.wikidata.org/bigdata/namespace/wdq/sparql';
 	var Root = (function (_super) {
 	    __extends(Root, _super);
 	    function Root() {
 	        _super.apply(this, arguments);
+	        this.state = { occupation: 'programmer' };
 	    }
+	    Root.prototype.search = function () {
+	        var query = queries_1.birthPlaceForOccupation(this.state.occupation);
+	        sparqlJson_1.sparqlQueryJson(endpoint, query, function (data) {
+	            console.log(data);
+	        });
+	    };
+	    Root.prototype.onInputChangeHandler = function (newVal) {
+	        this.setState({
+	            occupation: newVal
+	        });
+	    };
 	    Root.prototype.render = function () {
-	        return (React.createElement("div", null));
+	        var _this = this;
+	        return (React.createElement("div", null, React.createElement("input", {value: this.state.occupation, onChange: function (e) { return _this.onInputChangeHandler(e.target.value); }}), React.createElement("button", {onClick: function () { return _this.search(); }})));
 	    };
 	    return Root;
 	}(React.Component));
@@ -19700,6 +19710,24 @@
 	}
 	exports.sparqlQueryJson = sparqlQueryJson;
 	;
+
+
+/***/ },
+/* 160 */
+/***/ function(module, exports) {
+
+	"use strict";
+	function birthPlaceForOccupation(occupation) {
+	    return ("PREFIX wd: <http://www.wikidata.org/entity/>\n" +
+	        "PREFIX wdt: <http://www.wikidata.org/prop/direct/>\n" +
+	        "PREFIX wikibase: <http://wikiba.se/ontology#>\n" +
+	        "PREFIX p: <http://www.wikidata.org/prop/>\n" +
+	        "PREFIX v: <http://www.wikidata.org/prop/statement/>\n" +
+	        "PREFIX q: <http://www.wikidata.org/prop/qualifier/>\n" +
+	        "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n" +
+	        ("\n        SELECT ?label ?coord ?place ?occupationLabel ?occupation ?picture WHERE {\n           ?subj wdt:P106 ?occupation .\n           ?occupation rdfs:label ?occupationLabel filter (lang(?occupationLabel) = \"en\") .\n           FILTER(STRSTARTS(?occupationLabel, '" + occupation + "')) .\n           ?subj wdt:P19 ?place .\n           ?place wdt:P625 ?coord .\n           ?subj wdt:P18 ?picture .\n           ?subj rdfs:label ?label filter (lang(?label) = \"en\")\n        }\n        LIMIT 10"));
+	}
+	exports.birthPlaceForOccupation = birthPlaceForOccupation;
 
 
 /***/ }

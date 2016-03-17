@@ -23,6 +23,7 @@
     "compileOnSave": true,
     "buildOnSave": false,
     "files": [
+        "src/queries.ts",
         "src/sparql.ts",
         "src/sparqlJson.ts",
         "typings/react/react-dom.d.ts",

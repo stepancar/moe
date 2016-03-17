@@ -1,17 +1,29 @@
 import * as React from 'react';
 import {render} from 'react-dom';
 import {sparqlQueryJson} from './sparqlJson';
+import {birthPlaceForOccupation} from './queries';
+const endpoint = 'http://query.wikidata.org/bigdata/namespace/wdq/sparql';
 
-const endpoint = 'http://dbpedia.org/sparql';
-const query = "SELECT * WHERE {?uri geo:lat ?lat .?uri geo:long ?lon .?uri rdf:type ?thetype .FILTER ( (?lat> 40.0  && ?lat < 41.15) &&(?lon> -3  && ?lon < 4)&& regex(?thetype,'^http://schema.org'))}";
-sparqlQueryJson(endpoint, query, (data) => {
-    console.log(data);
-});
-class Root extends React.Component<{}, {}> {
 
+class Root extends React.Component<{}, { occupation: string }> {
+    state = { occupation: 'programmer' };
+    search() {
+        const query = birthPlaceForOccupation(this.state.occupation);
+        sparqlQueryJson(endpoint, query, (data) => {
+            console.log(data);
+        });
+    }
+    onInputChangeHandler(newVal: string) {
+        this.setState({
+            occupation: newVal
+        });
+    }
     render() {
         return (
-            <div></div>
+            <div>
+                <input value={this.state.occupation} onChange={(e) => this.onInputChangeHandler((e.target as any).value) } />
+                <button onClick={() => this.search() }/>
+            </div>
         );
     }
 }
