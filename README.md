@@ -4,4 +4,4 @@ moe project
 npm run prepareBuil
 
 open index.html in browser
-(birth place by occupation)[http://prnt.sc/agptb4]
+(birth place by occupation)[http://i.imgur.com/UbvLLwK.png]
