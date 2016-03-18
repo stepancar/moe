@@ -52,110 +52,15 @@
 	};
 	var React = __webpack_require__(1);
 	var react_dom_1 = __webpack_require__(158);
-	var sparqlJson_1 = __webpack_require__(159);
-	var queries_1 = __webpack_require__(160);
-	var endpoint = 'http://query.wikidata.org/bigdata/namespace/wdq/sparql';
-	window.ymaps.ready(init);
-	var myMap;
-	var map;
-	var rectangle;
-	var frame;
-	var markers = [];
-	window.initMap = function () {
-	    map = new window.google.maps.Map(document.getElementById('gmap'), {
-	        center: { lat: 40, lng: 0 },
-	        zoom: 1
-	    });
-	    rectangle = new google.maps.Rectangle({
-	        bounds: new google.maps.LatLngBounds(new google.maps.LatLng(0, 0), new google.maps.LatLng(70, 30)),
-	        editable: true,
-	        draggable: true
-	    });
-	    rectangle.addListener('bounds_changed', function () {
-	        var bounds = rectangle.getBounds();
-	        frame = {
-	            maxLatitude: bounds.getNorthEast().lat(),
-	            minLatitude: bounds.getSouthWest().lat(),
-	            maxLongitude: bounds.getNorthEast().lng(),
-	            minLongetude: bounds.getSouthWest().lng()
-	        };
-	        console.log(frame);
-	    });
-	    rectangle.setMap(map);
-	};
-	function init() {
-	    myMap = new window.ymaps.Map('map', {
-	        center: [40, 0],
-	        zoom: 1
-	    });
-	}
+	var occupation_1 = __webpack_require__(161);
+	var placesInFrame_1 = __webpack_require__(162);
 	var Root = (function (_super) {
 	    __extends(Root, _super);
 	    function Root() {
 	        _super.apply(this, arguments);
-	        this.state = { occupation: 'scientist', limit: 20, countries: [] };
 	    }
-	    Root.prototype.componentDidMount = function () {
-	        this.search();
-	    };
-	    Root.prototype.search = function () {
-	        var query = queries_1.birthPlaceForOccupation(this.state.occupation, this.state.limit);
-	        var queryForPlaces = queries_1.getPlacesByGeoFrame(frame, 400);
-	        sparqlJson_1.sparqlQueryJson(endpoint, queryForPlaces, function (data) {
-	            console.log(JSON.parse(data).results.bindings);
-	            markers.forEach(function (marker) {
-	                marker.setMap(null);
-	            });
-	            markers = [];
-	            for (var _i = 0, _a = JSON.parse(data).results.bindings; _i < _a.length; _i++) {
-	                var hum = _a[_i];
-	                var coords = [parseFloat(hum.lat.value), parseFloat(hum.long.value)];
-	                var name_1 = hum.label.value;
-	                var personLink = hum.subj.value;
-	                var photoSrc = hum.picture.value;
-	                var marker = new google.maps.Marker({
-	                    position: { lat: coords[0], lng: coords[1] },
-	                    map: map,
-	                    title: 'Hello World!'
-	                });
-	                markers.push(marker);
-	            }
-	        });
-	        sparqlJson_1.sparqlQueryJson(endpoint, query, function (data) {
-	            myMap.geoObjects.removeAll();
-	            console.log(data);
-	            for (var _i = 0, _a = JSON.parse(data).results.bindings; _i < _a.length; _i++) {
-	                var hum = _a[_i];
-	                var coords = [parseFloat(hum.lat.value), parseFloat(hum.long.value)];
-	                var name_2 = hum.label.value;
-	                var personLink = hum.subj.value;
-	                var photoSrc = hum.picture.value;
-	                var myPlacemark = new window.ymaps.GeoObject({
-	                    geometry: {
-	                        type: 'Point',
-	                        coordinates: coords
-	                    },
-	                    properties: {
-	                        balloonContent: ("<span>\n                                <a href=\"" + personLink + "\" target=\"_blank\">\n                                    " + name_2 + "\n                                    <img style=\"width: 60px\" src=\"" + photoSrc + "\" />\n                                </a>\n                            </span>")
-	                    }
-	                });
-	                myMap.geoObjects.add(myPlacemark);
-	            }
-	        });
-	    };
-	    Root.prototype.onInputChangeHandler = function (newVal) {
-	        this.setState({
-	            occupation: newVal
-	        });
-	    };
-	    Root.prototype.onLimitInputChangeHandler = function (newLimit) {
-	        this.setState({ limit: newLimit });
-	    };
 	    Root.prototype.render = function () {
-	        var _this = this;
-	        return (React.createElement("div", null, React.createElement("h3", null, "Write occupation"), React.createElement("input", {value: this.state.limit, type: "number", onChange: function (e) { return _this.onLimitInputChangeHandler(e.target.value); }}), React.createElement("input", {value: this.state.occupation, onChange: function (e) { return _this.onInputChangeHandler(e.target.value); }}), React.createElement("button", {onClick: function () { return _this.search(); }}, " Search"), React.createElement("select", null, this.state.countries.map(function (country) {
-	            return React.createElement("option", null);
-	        }))));
+	        return (React.createElement("div", null, React.createElement(occupation_1.Occupation, null), React.createElement(placesInFrame_1.PlacesInFrame, null)));
 	    };
 	    return Root;
 	}(React.Component));
@@ -19795,9 +19700,11 @@
 
 /***/ },
 /* 160 */
-/***/ function(module, exports) {
+/***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
+	var sparqlJson_1 = __webpack_require__(159);
+	var wikiDataEndPoint = 'https://query.wikidata.org/bigdata/namespace/wdq/sparql';
 	var prefixes = 'PREFIX wd: <http://www.wikidata.org/entity/>\n' +
 	    'PREFIX wdt: <http://www.wikidata.org/prop/direct/>\n' +
 	    'PREFIX wikibase: <http://wikiba.se/ontology#>\n' +
@@ -19811,16 +19718,171 @@
 	        ("\n        SELECT ?subj ?lat ?long ?label ?place ?occupationLabel ?occupation ?picture WHERE {\n           ?subj wdt:P106 ?occupation .\n           ?occupation rdfs:label ?occupationLabel filter (lang(?occupationLabel) = 'en') .\n           FILTER(STRSTARTS(?occupationLabel, '" + occupation + "')) .\n           ?subj wdt:P19 ?place .\n           ?place p:P625 ?coordinate .\n           ?coordinate psv:P625 ?coordinate_node .\n           ?coordinate_node wikibase:geoLatitude ?lat .\n           ?coordinate_node wikibase:geoLongitude ?long .\n           ?subj wdt:P18 ?picture .\n           ?subj rdfs:label ?label filter (lang(?label) = 'en')\n        }\n        LIMIT " + limit));
 	}
 	exports.birthPlaceForOccupation = birthPlaceForOccupation;
-	function getPlacesByGeoFrame(geoFrame, limit) {
+	function getPlacesByGeoFrame(geoFrame, limit, callback) {
 	    if (limit === void 0) { limit = 20; }
-	    return (prefixes +
-	        ("\n      SELECT ?subj ?lat ?long ?label ?place ?occupationLabel ?occupation ?picture WHERE {\n         ?subj wdt:P106 ?occupation .\n         ?occupation rdfs:label ?occupationLabel filter (lang(?occupationLabel) = 'en') .\n         ?subj wdt:P19 ?place .\n         ?place p:P625 ?coordinate .\n         ?coordinate psv:P625 ?coordinate_node .\n         ?coordinate_node wikibase:geoLatitude ?lat\n           filter (\n             ?lat>" + geoFrame.minLatitude + " && ?lat<" + geoFrame.maxLatitude + " &&\n             ?long>" + geoFrame.minLongetude + " && ?long<" + geoFrame.maxLongitude + "\n           ).\n         ?coordinate_node wikibase:geoLongitude ?long .\n         ?subj wdt:P18 ?picture .\n         ?subj rdfs:label ?label filter (lang(?label) = 'en')\n      }\n      LIMIT " + limit));
+	    var query = prefixes + ("\n\n        SELECT ?subj ?lat ?long ?label ?place ?occupationLabel ?occupation ?picture WHERE {\n           ?subj wdt:P106 ?occupation .\n           ?occupation rdfs:label ?occupationLabel filter (lang(?occupationLabel) = 'en') .\n           ?subj wdt:P19 ?place .\n           ?place p:P625 ?coordinate .\n           ?coordinate psv:P625 ?coordinate_node .\n           ?coordinate_node wikibase:geoLatitude ?lat\n             filter (\n               ?lat>" + geoFrame.minLatitude + " && ?lat<" + geoFrame.maxLatitude + " &&\n               ?long>" + geoFrame.minLongetude + " && ?long<" + geoFrame.maxLongitude + "\n             ).\n           ?coordinate_node wikibase:geoLongitude ?long .\n           ?subj wdt:P18 ?picture .\n           ?subj rdfs:label ?label filter (lang(?label) = 'en')\n        }\n        LIMIT " + limit);
+	    sparqlJson_1.sparqlQueryJson(wikiDataEndPoint, query, function (data) { return JSON.parse(data).results.bindings; });
 	}
 	exports.getPlacesByGeoFrame = getPlacesByGeoFrame;
 	function countries() {
 	    return (prefixes + "\n        SELECT ?country ?label {\n           ?country wdt:P31 wd:Q6256 .\n           ?country rdfs:label ?label filter (lang(?label) = 'en')\n        }\n      ");
 	}
 	exports.countries = countries;
+
+
+/***/ },
+/* 161 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+	var __extends = (this && this.__extends) || function (d, b) {
+	    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+	    function __() { this.constructor = d; }
+	    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+	};
+	var React = __webpack_require__(1);
+	var sparqlJson_1 = __webpack_require__(159);
+	var queries_1 = __webpack_require__(160);
+	var endpoint = 'https://query.wikidata.org/bigdata/namespace/wdq/sparql';
+	var myMap;
+	var Occupation = (function (_super) {
+	    __extends(Occupation, _super);
+	    function Occupation() {
+	        _super.apply(this, arguments);
+	        this.state = { occupation: 'scientist', limit: 20, countries: [] };
+	    }
+	    Occupation.prototype.componentDidMount = function () {
+	        var _this = this;
+	        window.ymaps.ready(function () {
+	            myMap = new window.ymaps.Map('map', {
+	                center: [40, 0],
+	                zoom: 1
+	            });
+	            _this.search();
+	        });
+	    };
+	    Occupation.prototype.search = function () {
+	        var query = queries_1.birthPlaceForOccupation(this.state.occupation, this.state.limit);
+	        sparqlJson_1.sparqlQueryJson(endpoint, query, function (data) {
+	            myMap.geoObjects.removeAll();
+	            console.log(data);
+	            for (var _i = 0, _a = JSON.parse(data).results.bindings; _i < _a.length; _i++) {
+	                var hum = _a[_i];
+	                var coords = [parseFloat(hum.lat.value), parseFloat(hum.long.value)];
+	                var name_1 = hum.label.value;
+	                var personLink = hum.subj.value;
+	                var photoSrc = hum.picture.value;
+	                var myPlacemark = new window.ymaps.GeoObject({
+	                    geometry: {
+	                        type: 'Point',
+	                        coordinates: coords
+	                    },
+	                    properties: {
+	                        balloonContent: ("<span>\n                              <a href=\"" + personLink + "\" target=\"_blank\">\n                                  " + name_1 + "\n                                  <img style=\"width: 60px\" src=\"" + photoSrc + "\" />\n                              </a>\n                          </span>")
+	                    }
+	                });
+	                myMap.geoObjects.add(myPlacemark);
+	            }
+	        });
+	    };
+	    Occupation.prototype.onInputChangeHandler = function (newVal) {
+	        this.setState({
+	            occupation: newVal
+	        });
+	    };
+	    Occupation.prototype.onLimitInputChangeHandler = function (newLimit) {
+	        this.setState({ limit: newLimit });
+	    };
+	    Occupation.prototype.shouldComponentUpdate = function () {
+	        return false;
+	    };
+	    Occupation.prototype.render = function () {
+	        var _this = this;
+	        return (React.createElement("div", null, React.createElement("h3", null, "Write occupation"), React.createElement("input", {value: this.state.limit, type: "number", onChange: function (e) { return _this.onLimitInputChangeHandler(e.target.value); }}), React.createElement("input", {value: this.state.occupation, onChange: function (e) { return _this.onInputChangeHandler(e.target.value); }}), React.createElement("button", {onClick: function () { return _this.search(); }}, " Search"), React.createElement("select", null, this.state.countries.map(function (country) {
+	            return React.createElement("option", null);
+	        })), React.createElement("div", {id: "map", style: { width: '600px', height: '400px' }})));
+	    };
+	    return Occupation;
+	}(React.Component));
+	exports.Occupation = Occupation;
+
+
+/***/ },
+/* 162 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+	var __extends = (this && this.__extends) || function (d, b) {
+	    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+	    function __() { this.constructor = d; }
+	    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+	};
+	var React = __webpack_require__(1);
+	var queries_1 = __webpack_require__(160);
+	var PlacesInFrame = (function (_super) {
+	    __extends(PlacesInFrame, _super);
+	    function PlacesInFrame() {
+	        _super.apply(this, arguments);
+	        this.frame = {
+	            minLatitude: 0,
+	            maxLatitude: 40,
+	            minLongetude: 0,
+	            maxLongitude: 50
+	        };
+	        this.markers = [];
+	    }
+	    PlacesInFrame.prototype.componentDidMount = function () {
+	        var _this = this;
+	        this.map = new window.google.maps.Map(document.getElementById('gmap'), {
+	            center: { lat: 40, lng: 0 },
+	            zoom: 1
+	        });
+	        var rectangle = new google.maps.Rectangle({
+	            bounds: new google.maps.LatLngBounds(new google.maps.LatLng(this.frame.minLatitude, this.frame.minLongetude), new google.maps.LatLng(this.frame.maxLatitude, this.frame.maxLongitude)),
+	            editable: true,
+	            draggable: true
+	        });
+	        rectangle.addListener('bounds_changed', function () {
+	            var bounds = rectangle.getBounds();
+	            _this.frame = {
+	                maxLatitude: bounds.getNorthEast().lat(),
+	                minLatitude: bounds.getSouthWest().lat(),
+	                maxLongitude: bounds.getNorthEast().lng(),
+	                minLongetude: bounds.getSouthWest().lng()
+	            };
+	        });
+	        rectangle.setMap(this.map);
+	        this.search();
+	    };
+	    PlacesInFrame.prototype.clearMarkers = function () {
+	        this.markers.forEach(function (marker) {
+	            marker.setMap(null);
+	        });
+	        this.markers = [];
+	    };
+	    PlacesInFrame.prototype.search = function () {
+	        var _this = this;
+	        queries_1.getPlacesByGeoFrame(this.frame, 40, function (places) {
+	            _this.clearMarkers();
+	            for (var _i = 0, places_1 = places; _i < places_1.length; _i++) {
+	                var place = places_1[_i];
+	                var coords = [parseFloat(place.lat.value), parseFloat(place.long.value)];
+	                var marker = new google.maps.Marker({
+	                    position: { lat: coords[0], lng: coords[1] },
+	                    map: _this.map,
+	                    title: 'Hello World!'
+	                });
+	                _this.markers.push(marker);
+	            }
+	        });
+	    };
+	    PlacesInFrame.prototype.render = function () {
+	        var _this = this;
+	        return (React.createElement("div", null, React.createElement("button", {onClick: function () { return _this.search(); }}, "Search"), React.createElement("div", {id: "gmap", style: { width: '600px', height: '400px' }})));
+	    };
+	    return PlacesInFrame;
+	}(React.Component));
+	exports.PlacesInFrame = PlacesInFrame;
 
 
 /***/ }

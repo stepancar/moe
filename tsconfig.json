@@ -29,7 +29,9 @@
         "typings/react/react-dom.d.ts",
         "typings/react/react.d.ts",
         "typings/tsd.d.ts",
-        "src/index.tsx"
+        "src/index.tsx",
+        "src/pages/occupation.tsx",
+        "src/pages/placesInFrame.tsx"
     ],
     "formatCodeOptions": {
         "indentSize": 4,
