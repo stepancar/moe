@@ -58,28 +58,38 @@
 	window.ymaps.ready(init);
 	var myMap;
 	function init() {
-	    myMap = new window.ymaps.Map("map", {
-	        center: [55.76, 37.64],
-	        zoom: 3
+	    myMap = new window.ymaps.Map('map', {
+	        center: [40, 0],
+	        zoom: 1
 	    });
 	}
 	var Root = (function (_super) {
 	    __extends(Root, _super);
 	    function Root() {
 	        _super.apply(this, arguments);
-	        this.state = { occupation: 'programmer' };
+	        this.state = { occupation: 'scientist', limit: 20 };
 	    }
+	    Root.prototype.componentDidMount = function () {
+	        this.search();
+	    };
 	    Root.prototype.search = function () {
-	        var query = queries_1.birthPlaceForOccupation(this.state.occupation);
+	        var query = queries_1.birthPlaceForOccupation(this.state.occupation, this.state.limit);
 	        sparqlJson_1.sparqlQueryJson(endpoint, query, function (data) {
+	            myMap.geoObjects.removeAll();
 	            console.log(data);
 	            for (var _i = 0, _a = JSON.parse(data).results.bindings; _i < _a.length; _i++) {
 	                var hum = _a[_i];
 	                var coords = hum.coord.value.replace('Point(', '').replace(')', '').split(' ').map(function (val) { return parseFloat(val); });
+	                var name_1 = hum.label.value;
+	                var personLink = hum.subj.value;
+	                var photoSrc = hum.picture.value;
 	                var myPlacemark = new window.ymaps.GeoObject({
 	                    geometry: {
-	                        type: "Point",
+	                        type: 'Point',
 	                        coordinates: coords
+	                    },
+	                    properties: {
+	                        balloonContent: ("<span>\n                                <a href=\"" + personLink + "\" target=\"_blank\">\n                                    " + name_1 + "\n                                    <img style=\"width: 60px\" src=\"" + photoSrc + "\" />\n                                </a>\n                            </span>")
 	                    }
 	                });
 	                myMap.geoObjects.add(myPlacemark);
@@ -91,9 +101,12 @@
 	            occupation: newVal
 	        });
 	    };
+	    Root.prototype.onLimitInputChangeHandler = function (newLimit) {
+	        this.setState({ limit: newLimit });
+	    };
 	    Root.prototype.render = function () {
 	        var _this = this;
-	        return (React.createElement("div", null, React.createElement("h3", null, "Write occupation"), React.createElement("input", {value: this.state.occupation, onChange: function (e) { return _this.onInputChangeHandler(e.target.value); }}), React.createElement("button", {onClick: function () { return _this.search(); }}, " Search")));
+	        return (React.createElement("div", null, React.createElement("h3", null, "Write occupation"), React.createElement("input", {value: this.state.limit, type: "number", onChange: function (e) { return _this.onLimitInputChangeHandler(e.target.value); }}), React.createElement("input", {value: this.state.occupation, onChange: function (e) { return _this.onInputChangeHandler(e.target.value); }}), React.createElement("button", {onClick: function () { return _this.search(); }}, " Search")));
 	    };
 	    return Root;
 	}(React.Component));
@@ -19736,7 +19749,8 @@
 /***/ function(module, exports) {
 
 	"use strict";
-	function birthPlaceForOccupation(occupation) {
+	function birthPlaceForOccupation(occupation, limit) {
+	    if (limit === void 0) { limit = 20; }
 	    return ("PREFIX wd: <http://www.wikidata.org/entity/>\n" +
 	        "PREFIX wdt: <http://www.wikidata.org/prop/direct/>\n" +
 	        "PREFIX wikibase: <http://wikiba.se/ontology#>\n" +
@@ -19744,7 +19758,7 @@
 	        "PREFIX v: <http://www.wikidata.org/prop/statement/>\n" +
 	        "PREFIX q: <http://www.wikidata.org/prop/qualifier/>\n" +
 	        "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n" +
-	        ("\n        SELECT ?label ?coord ?place ?occupationLabel ?occupation ?picture WHERE {\n           ?subj wdt:P106 ?occupation .\n           ?occupation rdfs:label ?occupationLabel filter (lang(?occupationLabel) = \"en\") .\n           FILTER(STRSTARTS(?occupationLabel, '" + occupation + "')) .\n           ?subj wdt:P19 ?place .\n           ?place wdt:P625 ?coord .\n           ?subj wdt:P18 ?picture .\n           ?subj rdfs:label ?label filter (lang(?label) = \"en\")\n        }\n        LIMIT 20"));
+	        ("\n        SELECT ?subj ?label ?coord ?place ?occupationLabel ?occupation ?picture WHERE {\n           ?subj wdt:P106 ?occupation .\n           ?occupation rdfs:label ?occupationLabel filter (lang(?occupationLabel) = \"en\") .\n           FILTER(STRSTARTS(?occupationLabel, '" + occupation + "')) .\n           ?subj wdt:P19 ?place .\n           ?place wdt:P625 ?coord .\n           ?subj wdt:P18 ?picture .\n           ?subj rdfs:label ?label filter (lang(?label) = \"en\")\n        }\n        LIMIT " + limit));
 	}
 	exports.birthPlaceForOccupation = birthPlaceForOccupation;
 
