@@ -67,7 +67,7 @@
 	    __extends(Root, _super);
 	    function Root() {
 	        _super.apply(this, arguments);
-	        this.state = { occupation: 'scientist', limit: 20 };
+	        this.state = { occupation: 'scientist', limit: 20, countries: [] };
 	    }
 	    Root.prototype.componentDidMount = function () {
 	        this.search();
@@ -106,7 +106,9 @@
 	    };
 	    Root.prototype.render = function () {
 	        var _this = this;
-	        return (React.createElement("div", null, React.createElement("h3", null, "Write occupation"), React.createElement("input", {value: this.state.limit, type: "number", onChange: function (e) { return _this.onLimitInputChangeHandler(e.target.value); }}), React.createElement("input", {value: this.state.occupation, onChange: function (e) { return _this.onInputChangeHandler(e.target.value); }}), React.createElement("button", {onClick: function () { return _this.search(); }}, " Search")));
+	        return (React.createElement("div", null, React.createElement("h3", null, "Write occupation"), React.createElement("input", {value: this.state.limit, type: "number", onChange: function (e) { return _this.onLimitInputChangeHandler(e.target.value); }}), React.createElement("input", {value: this.state.occupation, onChange: function (e) { return _this.onInputChangeHandler(e.target.value); }}), React.createElement("button", {onClick: function () { return _this.search(); }}, " Search"), React.createElement("select", null, this.state.countries.map(function (country) {
+	            return React.createElement("option", null);
+	        }))));
 	    };
 	    return Root;
 	}(React.Component));
@@ -19749,18 +19751,23 @@
 /***/ function(module, exports) {
 
 	"use strict";
+	var prefixes = 'PREFIX wd: <http://www.wikidata.org/entity/>\n' +
+	    'PREFIX wdt: <http://www.wikidata.org/prop/direct/>\n' +
+	    'PREFIX wikibase: <http://wikiba.se/ontology#>\n' +
+	    'PREFIX p: <http://www.wikidata.org/prop/>\n' +
+	    'PREFIX v: <http://www.wikidata.org/prop/statement/>\n' +
+	    'PREFIX q: <http://www.wikidata.org/prop/qualifier/>\n' +
+	    'PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n';
 	function birthPlaceForOccupation(occupation, limit) {
 	    if (limit === void 0) { limit = 20; }
-	    return ("PREFIX wd: <http://www.wikidata.org/entity/>\n" +
-	        "PREFIX wdt: <http://www.wikidata.org/prop/direct/>\n" +
-	        "PREFIX wikibase: <http://wikiba.se/ontology#>\n" +
-	        "PREFIX p: <http://www.wikidata.org/prop/>\n" +
-	        "PREFIX v: <http://www.wikidata.org/prop/statement/>\n" +
-	        "PREFIX q: <http://www.wikidata.org/prop/qualifier/>\n" +
-	        "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n" +
-	        ("\n        SELECT ?subj ?label ?coord ?place ?occupationLabel ?occupation ?picture WHERE {\n           ?subj wdt:P106 ?occupation .\n           ?occupation rdfs:label ?occupationLabel filter (lang(?occupationLabel) = \"en\") .\n           FILTER(STRSTARTS(?occupationLabel, '" + occupation + "')) .\n           ?subj wdt:P19 ?place .\n           ?place wdt:P625 ?coord .\n           ?subj wdt:P18 ?picture .\n           ?subj rdfs:label ?label filter (lang(?label) = \"en\")\n        }\n        LIMIT " + limit));
+	    return (prefixes +
+	        ("\n        SELECT ?subj ?label ?coord ?place ?occupationLabel ?occupation ?picture WHERE {\n           ?subj wdt:P106 ?occupation .\n           ?occupation rdfs:label ?occupationLabel filter (lang(?occupationLabel) = 'en') .\n           FILTER(STRSTARTS(?occupationLabel, '" + occupation + "')) .\n           ?subj wdt:P19 ?place .\n           ?place wdt:P625 ?coord .\n           ?subj wdt:P18 ?picture .\n           ?subj rdfs:label ?label filter (lang(?label) = 'en')\n        }\n        LIMIT " + limit));
 	}
 	exports.birthPlaceForOccupation = birthPlaceForOccupation;
+	function countries() {
+	    return (prefixes + "\n        SELECT ?country ?label {\n           ?country wdt:P31 wd:Q6256 .\n           ?country rdfs:label ?label filter (lang(?label) = 'en')\n        }\n      ");
+	}
+	exports.countries = countries;
 
 
 /***/ }

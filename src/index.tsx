@@ -13,8 +13,8 @@ function init() {
         zoom: 1
     });
 }
-class Root extends React.Component<{}, { occupation: string, limit: number }> {
-    state = { occupation: 'scientist', limit: 20 };
+class Root extends React.Component<{}, { occupation: string, limit: number, countries: Array<any> }> {
+    state = { occupation: 'scientist', limit: 20, countries: [] };
     componentDidMount() {
         this.search();
     }
@@ -67,6 +67,11 @@ class Root extends React.Component<{}, { occupation: string, limit: number }> {
                 <input value={this.state.limit} type="number" onChange={(e) => this.onLimitInputChangeHandler((e.target as any).value) } />
                 <input value={this.state.occupation} onChange={(e) => this.onInputChangeHandler((e.target as any).value) } />
                 <button onClick={() => this.search() }> Search</button>
+                <select>
+                    {this.state.countries.map((country) =>
+                        <option></option>
+                    ) }
+                </select>
             </div>
         );
     }
