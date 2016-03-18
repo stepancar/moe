@@ -58,16 +58,28 @@
 	window.ymaps.ready(init);
 	var myMap;
 	var map;
+	var rectangle;
+	var frame;
+	var markers = [];
 	window.initMap = function () {
 	    map = new window.google.maps.Map(document.getElementById('gmap'), {
 	        center: { lat: 40, lng: 0 },
 	        zoom: 1
 	    });
-	    var bounds = new google.maps.LatLngBounds(new google.maps.LatLng(40, 0), new google.maps.LatLng(70, 30));
-	    var rectangle = new google.maps.Rectangle({
-	        bounds: bounds,
+	    rectangle = new google.maps.Rectangle({
+	        bounds: new google.maps.LatLngBounds(new google.maps.LatLng(0, 0), new google.maps.LatLng(70, 30)),
 	        editable: true,
 	        draggable: true
+	    });
+	    rectangle.addListener('bounds_changed', function () {
+	        var bounds = rectangle.getBounds();
+	        frame = {
+	            maxLatitude: bounds.getNorthEast().lat(),
+	            minLatitude: bounds.getSouthWest().lat(),
+	            maxLongitude: bounds.getNorthEast().lng(),
+	            minLongetude: bounds.getSouthWest().lng()
+	        };
+	        console.log(frame);
 	    });
 	    rectangle.setMap(map);
 	};
@@ -88,13 +100,34 @@
 	    };
 	    Root.prototype.search = function () {
 	        var query = queries_1.birthPlaceForOccupation(this.state.occupation, this.state.limit);
+	        var queryForPlaces = queries_1.getPlacesByGeoFrame(frame, 400);
+	        sparqlJson_1.sparqlQueryJson(endpoint, queryForPlaces, function (data) {
+	            console.log(JSON.parse(data).results.bindings);
+	            markers.forEach(function (marker) {
+	                marker.setMap(null);
+	            });
+	            markers = [];
+	            for (var _i = 0, _a = JSON.parse(data).results.bindings; _i < _a.length; _i++) {
+	                var hum = _a[_i];
+	                var coords = [parseFloat(hum.lat.value), parseFloat(hum.long.value)];
+	                var name_1 = hum.label.value;
+	                var personLink = hum.subj.value;
+	                var photoSrc = hum.picture.value;
+	                var marker = new google.maps.Marker({
+	                    position: { lat: coords[0], lng: coords[1] },
+	                    map: map,
+	                    title: 'Hello World!'
+	                });
+	                markers.push(marker);
+	            }
+	        });
 	        sparqlJson_1.sparqlQueryJson(endpoint, query, function (data) {
 	            myMap.geoObjects.removeAll();
 	            console.log(data);
 	            for (var _i = 0, _a = JSON.parse(data).results.bindings; _i < _a.length; _i++) {
 	                var hum = _a[_i];
-	                var coords = hum.coord.value.replace('Point(', '').replace(')', '').split(' ').map(function (val) { return parseFloat(val); });
-	                var name_1 = hum.label.value;
+	                var coords = [parseFloat(hum.lat.value), parseFloat(hum.long.value)];
+	                var name_2 = hum.label.value;
 	                var personLink = hum.subj.value;
 	                var photoSrc = hum.picture.value;
 	                var myPlacemark = new window.ymaps.GeoObject({
@@ -103,7 +136,7 @@
 	                        coordinates: coords
 	                    },
 	                    properties: {
-	                        balloonContent: ("<span>\n                                <a href=\"" + personLink + "\" target=\"_blank\">\n                                    " + name_1 + "\n                                    <img style=\"width: 60px\" src=\"" + photoSrc + "\" />\n                                </a>\n                            </span>")
+	                        balloonContent: ("<span>\n                                <a href=\"" + personLink + "\" target=\"_blank\">\n                                    " + name_2 + "\n                                    <img style=\"width: 60px\" src=\"" + photoSrc + "\" />\n                                </a>\n                            </span>")
 	                    }
 	                });
 	                myMap.geoObjects.add(myPlacemark);
@@ -19775,9 +19808,15 @@
 	function birthPlaceForOccupation(occupation, limit) {
 	    if (limit === void 0) { limit = 20; }
 	    return (prefixes +
-	        ("\n        SELECT ?subj ?label ?coord ?place ?occupationLabel ?occupation ?picture WHERE {\n           ?subj wdt:P106 ?occupation .\n           ?occupation rdfs:label ?occupationLabel filter (lang(?occupationLabel) = 'en') .\n           FILTER(STRSTARTS(?occupationLabel, '" + occupation + "')) .\n           ?subj wdt:P19 ?place .\n           ?place wdt:P625 ?coord .\n           ?subj wdt:P18 ?picture .\n           ?subj rdfs:label ?label filter (lang(?label) = 'en')\n        }\n        LIMIT " + limit));
+	        ("\n        SELECT ?subj ?lat ?long ?label ?place ?occupationLabel ?occupation ?picture WHERE {\n           ?subj wdt:P106 ?occupation .\n           ?occupation rdfs:label ?occupationLabel filter (lang(?occupationLabel) = 'en') .\n           FILTER(STRSTARTS(?occupationLabel, '" + occupation + "')) .\n           ?subj wdt:P19 ?place .\n           ?place p:P625 ?coordinate .\n           ?coordinate psv:P625 ?coordinate_node .\n           ?coordinate_node wikibase:geoLatitude ?lat .\n           ?coordinate_node wikibase:geoLongitude ?long .\n           ?subj wdt:P18 ?picture .\n           ?subj rdfs:label ?label filter (lang(?label) = 'en')\n        }\n        LIMIT " + limit));
 	}
 	exports.birthPlaceForOccupation = birthPlaceForOccupation;
+	function getPlacesByGeoFrame(geoFrame, limit) {
+	    if (limit === void 0) { limit = 20; }
+	    return (prefixes +
+	        ("\n      SELECT ?subj ?lat ?long ?label ?place ?occupationLabel ?occupation ?picture WHERE {\n         ?subj wdt:P106 ?occupation .\n         ?occupation rdfs:label ?occupationLabel filter (lang(?occupationLabel) = 'en') .\n         ?subj wdt:P19 ?place .\n         ?place p:P625 ?coordinate .\n         ?coordinate psv:P625 ?coordinate_node .\n         ?coordinate_node wikibase:geoLatitude ?lat\n           filter (\n             ?lat>" + geoFrame.minLatitude + " && ?lat<" + geoFrame.maxLatitude + " &&\n             ?long>" + geoFrame.minLongetude + " && ?long<" + geoFrame.maxLongitude + "\n           ).\n         ?coordinate_node wikibase:geoLongitude ?long .\n         ?subj wdt:P18 ?picture .\n         ?subj rdfs:label ?label filter (lang(?label) = 'en')\n      }\n      LIMIT " + limit));
+	}
+	exports.getPlacesByGeoFrame = getPlacesByGeoFrame;
 	function countries() {
 	    return (prefixes + "\n        SELECT ?country ?label {\n           ?country wdt:P31 wd:Q6256 .\n           ?country rdfs:label ?label filter (lang(?label) = 'en')\n        }\n      ");
 	}

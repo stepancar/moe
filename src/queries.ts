@@ -10,16 +10,49 @@ export function birthPlaceForOccupation(occupation: string, limit = 20) {
     return (
         prefixes +
         `
-        SELECT ?subj ?label ?coord ?place ?occupationLabel ?occupation ?picture WHERE {
+        SELECT ?subj ?lat ?long ?label ?place ?occupationLabel ?occupation ?picture WHERE {
            ?subj wdt:P106 ?occupation .
            ?occupation rdfs:label ?occupationLabel filter (lang(?occupationLabel) = 'en') .
            FILTER(STRSTARTS(?occupationLabel, '${occupation}')) .
            ?subj wdt:P19 ?place .
-           ?place wdt:P625 ?coord .
+           ?place p:P625 ?coordinate .
+           ?coordinate psv:P625 ?coordinate_node .
+           ?coordinate_node wikibase:geoLatitude ?lat .
+           ?coordinate_node wikibase:geoLongitude ?long .
            ?subj wdt:P18 ?picture .
            ?subj rdfs:label ?label filter (lang(?label) = 'en')
         }
         LIMIT ${limit}`
+    );
+}
+
+interface GeoFrame {
+    maxLatitude: number;
+    minLatitude: number;
+    maxLongitude: number;
+    minLongetude: number;
+}
+
+export function getPlacesByGeoFrame(geoFrame: GeoFrame, limit = 20) {
+    return (
+        prefixes +
+        `
+      SELECT ?subj ?lat ?long ?label ?place ?occupationLabel ?occupation ?picture WHERE {
+         ?subj wdt:P106 ?occupation .
+         ?occupation rdfs:label ?occupationLabel filter (lang(?occupationLabel) = 'en') .
+         ?subj wdt:P19 ?place .
+         ?place p:P625 ?coordinate .
+         ?coordinate psv:P625 ?coordinate_node .
+         ?coordinate_node wikibase:geoLatitude ?lat
+           filter (
+             ?lat>${geoFrame.minLatitude} && ?lat<${geoFrame.maxLatitude} &&
+             ?long>${geoFrame.minLongetude} && ?long<${geoFrame.maxLongitude}
+           ).
+         ?coordinate_node wikibase:geoLongitude ?long .
+         ?subj wdt:P18 ?picture .
+         ?subj rdfs:label ?label filter (lang(?label) = 'en')
+      }
+      LIMIT ${limit}`
     );
 }
 
