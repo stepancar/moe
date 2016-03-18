@@ -57,6 +57,20 @@
 	var endpoint = 'http://query.wikidata.org/bigdata/namespace/wdq/sparql';
 	window.ymaps.ready(init);
 	var myMap;
+	var map;
+	window.initMap = function () {
+	    map = new window.google.maps.Map(document.getElementById('gmap'), {
+	        center: { lat: 40, lng: 0 },
+	        zoom: 1
+	    });
+	    var bounds = new google.maps.LatLngBounds(new google.maps.LatLng(40, 0), new google.maps.LatLng(70, 30));
+	    var rectangle = new google.maps.Rectangle({
+	        bounds: bounds,
+	        editable: true,
+	        draggable: true
+	    });
+	    rectangle.setMap(map);
+	};
 	function init() {
 	    myMap = new window.ymaps.Map('map', {
 	        center: [40, 0],

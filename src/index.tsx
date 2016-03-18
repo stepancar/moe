@@ -3,10 +3,28 @@ import {render} from 'react-dom';
 import {sparqlQueryJson} from './sparqlJson';
 import {birthPlaceForOccupation} from './queries';
 const endpoint = 'http://query.wikidata.org/bigdata/namespace/wdq/sparql';
-
+declare var google: any;
 (window as any).ymaps.ready(init);
 let myMap;
+let map;
+(window as any).initMap = function() {
+    map = new (window as any).google.maps.Map(document.getElementById('gmap'), {
+        center: { lat: 40, lng: 0 },
+        zoom: 1
+    });
+    let bounds = new google.maps.LatLngBounds(
+        new google.maps.LatLng(40, 0),
+        new google.maps.LatLng(70, 30)
+    );
 
+    let rectangle = new google.maps.Rectangle({
+        bounds: bounds,
+        editable: true,
+        draggable: true
+    });
+
+    rectangle.setMap(map);
+};
 function init() {
     myMap = new (window as any).ymaps.Map('map', {
         center: [40, 0],
