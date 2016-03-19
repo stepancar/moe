@@ -1,4 +1,4 @@
-# moe
+# Sparql wokodata examples
 Fetch data from wikidata examples
 See [Web page](http://stepancar.github.io/sparql-wikidata-examples/)
 and [sources](https://github.com/stepancar/sparql-wikidata-examples/tree/master) 
