@@ -27,6 +27,8 @@ open index.html in browser
 ![birth place by occupation](http://i.imgur.com/UbvLLwK.png)
 ### There are no scientists in Russia
 ![there are no scientists in Russia](http://i.imgur.com/GnEi66j.png)
+### Frame filter
+![display all museums in frame](http://i.imgur.com/SjJ6Mew.png)
 ### contribution 
 App created using React and typescript
 for new example you should create new Page Component 
