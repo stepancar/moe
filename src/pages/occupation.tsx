@@ -13,7 +13,7 @@ export class Occupation extends React.Component<{}, { occupation: string, limit:
                 center: [40, 0],
                 zoom: 1
             });
-            this.search();
+            //this.search();
         });
 
     }

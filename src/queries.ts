@@ -40,24 +40,27 @@ export function getPlacesByGeoFrame(geoFrame: GeoFrame, limit = 20, callback: (d
 
     const query = prefixes + (`
 
-        SELECT ?subj ?lat ?long ?label ?place ?occupationLabel ?occupation ?picture WHERE {
-           ?subj wdt:P106 ?occupation .
-           ?occupation rdfs:label ?occupationLabel filter (lang(?occupationLabel) = 'en') .
-           ?subj wdt:P19 ?place .
-           ?place p:P625 ?coordinate .
-           ?coordinate psv:P625 ?coordinate_node .
-           ?coordinate_node wikibase:geoLatitude ?lat
-             filter (
-               ?lat>${geoFrame.minLatitude} && ?lat<${geoFrame.maxLatitude} &&
-               ?long>${geoFrame.minLongetude} && ?long<${geoFrame.maxLongitude}
-             ).
-           ?coordinate_node wikibase:geoLongitude ?long .
-           ?subj wdt:P18 ?picture .
-           ?subj rdfs:label ?label filter (lang(?label) = 'en')
+      SELECT DISTINCT ?item ?name ?coord ?lat ?long WHERE {
+         ?item wdt:P131* wd:Q61 .
+         ?item wdt:P31/wdt:P279* wd:Q33506 .
+         ?item wdt:P625 ?coord .
+         ?item p:P625 ?coordinate .
+         ?coordinate psv:P625 ?coordinate_node .
+         ?coordinate_node wikibase:geoLatitude ?lat .
+         ?coordinate_node wikibase:geoLongitude ?long .
+           filter (
+             ?lat>${geoFrame.minLatitude} && ?lat<${geoFrame.maxLatitude} &&
+             ?long>${geoFrame.minLongetude} && ?long<${geoFrame.maxLongitude}
+           ).
+          SERVICE wikibase:label {
+            bd:serviceParam wikibase:language "en" .
+            ?item rdfs:label ?name
+          }
         }
-        LIMIT ${limit}`
+        ORDER BY ASC (?name)
+        #LIMIT ${limit}`
     );
-    sparqlQueryJson(wikiDataEndPoint, query, (data) => JSON.parse(data).results.bindings);
+    sparqlQueryJson(wikiDataEndPoint, query, (data) => callback(JSON.parse(data).results.bindings));
 }
 
 export function countries() {
