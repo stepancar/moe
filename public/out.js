@@ -52,15 +52,63 @@
 	};
 	var React = __webpack_require__(1);
 	var react_dom_1 = __webpack_require__(158);
-	var occupation_1 = __webpack_require__(161);
-	var placesInFrame_1 = __webpack_require__(162);
+	var sparqlJson_1 = __webpack_require__(159);
+	var queries_1 = __webpack_require__(160);
+	var endpoint = 'http://query.wikidata.org/bigdata/namespace/wdq/sparql';
+	window.ymaps.ready(init);
+	var myMap;
+	function init() {
+	    myMap = new window.ymaps.Map('map', {
+	        center: [40, 0],
+	        zoom: 1
+	    });
+	}
 	var Root = (function (_super) {
 	    __extends(Root, _super);
 	    function Root() {
 	        _super.apply(this, arguments);
+	        this.state = { occupation: 'scientist', limit: 20, countries: [] };
 	    }
+	    Root.prototype.componentDidMount = function () {
+	        this.search();
+	    };
+	    Root.prototype.search = function () {
+	        var query = queries_1.birthPlaceForOccupation(this.state.occupation, this.state.limit);
+	        sparqlJson_1.sparqlQueryJson(endpoint, query, function (data) {
+	            myMap.geoObjects.removeAll();
+	            console.log(data);
+	            for (var _i = 0, _a = JSON.parse(data).results.bindings; _i < _a.length; _i++) {
+	                var hum = _a[_i];
+	                var coords = hum.coord.value.replace('Point(', '').replace(')', '').split(' ').map(function (val) { return parseFloat(val); });
+	                var name_1 = hum.label.value;
+	                var personLink = hum.subj.value;
+	                var photoSrc = hum.picture.value;
+	                var myPlacemark = new window.ymaps.GeoObject({
+	                    geometry: {
+	                        type: 'Point',
+	                        coordinates: coords
+	                    },
+	                    properties: {
+	                        balloonContent: ("<span>\n                                <a href=\"" + personLink + "\" target=\"_blank\">\n                                    " + name_1 + "\n                                    <img style=\"width: 60px\" src=\"" + photoSrc + "\" />\n                                </a>\n                            </span>")
+	                    }
+	                });
+	                myMap.geoObjects.add(myPlacemark);
+	            }
+	        });
+	    };
+	    Root.prototype.onInputChangeHandler = function (newVal) {
+	        this.setState({
+	            occupation: newVal
+	        });
+	    };
+	    Root.prototype.onLimitInputChangeHandler = function (newLimit) {
+	        this.setState({ limit: newLimit });
+	    };
 	    Root.prototype.render = function () {
-	        return (React.createElement("div", null, React.createElement(occupation_1.Occupation, null), React.createElement(placesInFrame_1.PlacesInFrame, null)));
+	        var _this = this;
+	        return (React.createElement("div", null, React.createElement("h3", null, "Write occupation"), React.createElement("input", {value: this.state.limit, type: "number", onChange: function (e) { return _this.onLimitInputChangeHandler(e.target.value); }}), React.createElement("input", {value: this.state.occupation, onChange: function (e) { return _this.onInputChangeHandler(e.target.value); }}), React.createElement("button", {onClick: function () { return _this.search(); }}, " Search"), React.createElement("select", null, this.state.countries.map(function (country) {
+	            return React.createElement("option", null);
+	        }))));
 	    };
 	    return Root;
 	}(React.Component));
@@ -19700,11 +19748,9 @@
 
 /***/ },
 /* 160 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ function(module, exports) {
 
 	"use strict";
-	var sparqlJson_1 = __webpack_require__(159);
-	var wikiDataEndPoint = 'https://query.wikidata.org/bigdata/namespace/wdq/sparql';
 	var prefixes = 'PREFIX wd: <http://www.wikidata.org/entity/>\n' +
 	    'PREFIX wdt: <http://www.wikidata.org/prop/direct/>\n' +
 	    'PREFIX wikibase: <http://wikiba.se/ontology#>\n' +
@@ -19715,180 +19761,13 @@
 	function birthPlaceForOccupation(occupation, limit) {
 	    if (limit === void 0) { limit = 20; }
 	    return (prefixes +
-	        ("\n        SELECT ?subj ?lat ?long ?label ?place ?occupationLabel ?occupation ?picture WHERE {\n           ?subj wdt:P106 ?occupation .\n           ?occupation rdfs:label ?occupationLabel filter (lang(?occupationLabel) = 'en') .\n           FILTER(STRSTARTS(?occupationLabel, '" + occupation + "')) .\n           ?subj wdt:P19 ?place .\n           ?place p:P625 ?coordinate .\n           ?coordinate psv:P625 ?coordinate_node .\n           ?coordinate_node wikibase:geoLatitude ?lat .\n           ?coordinate_node wikibase:geoLongitude ?long .\n           ?subj wdt:P18 ?picture .\n           ?subj rdfs:label ?label filter (lang(?label) = 'en')\n        }\n        LIMIT " + limit));
+	        ("\n        SELECT ?subj ?label ?coord ?place ?occupationLabel ?occupation ?picture WHERE {\n           ?subj wdt:P106 ?occupation .\n           ?occupation rdfs:label ?occupationLabel filter (lang(?occupationLabel) = 'en') .\n           FILTER(STRSTARTS(?occupationLabel, '" + occupation + "')) .\n           ?subj wdt:P19 ?place .\n           ?place wdt:P625 ?coord .\n           ?subj wdt:P18 ?picture .\n           ?subj rdfs:label ?label filter (lang(?label) = 'en')\n        }\n        LIMIT " + limit));
 	}
 	exports.birthPlaceForOccupation = birthPlaceForOccupation;
-	function getPlacesByGeoFrame(geoFrame, limit, callback) {
-	    if (limit === void 0) { limit = 20; }
-	    var query = prefixes + ("\n\n      SELECT DISTINCT ?item ?name ?coord ?lat ?long WHERE {\n         ?item wdt:P131* wd:Q61 .\n         ?item wdt:P31/wdt:P279* wd:Q33506 .\n         ?item wdt:P625 ?coord .\n         ?item p:P625 ?coordinate .\n         ?coordinate psv:P625 ?coordinate_node .\n         ?coordinate_node wikibase:geoLatitude ?lat .\n         ?coordinate_node wikibase:geoLongitude ?long .\n           filter (\n             ?lat>" + geoFrame.minLatitude + " && ?lat<" + geoFrame.maxLatitude + " &&\n             ?long>" + geoFrame.minLongetude + " && ?long<" + geoFrame.maxLongitude + "\n           ).\n          SERVICE wikibase:label {\n            bd:serviceParam wikibase:language \"en\" .\n            ?item rdfs:label ?name\n          }\n        }\n        ORDER BY ASC (?name)\n        #LIMIT " + limit);
-	    sparqlJson_1.sparqlQueryJson(wikiDataEndPoint, query, function (data) { return callback(JSON.parse(data).results.bindings); });
-	}
-	exports.getPlacesByGeoFrame = getPlacesByGeoFrame;
 	function countries() {
 	    return (prefixes + "\n        SELECT ?country ?label {\n           ?country wdt:P31 wd:Q6256 .\n           ?country rdfs:label ?label filter (lang(?label) = 'en')\n        }\n      ");
 	}
 	exports.countries = countries;
-
-
-/***/ },
-/* 161 */
-/***/ function(module, exports, __webpack_require__) {
-
-	"use strict";
-	var __extends = (this && this.__extends) || function (d, b) {
-	    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-	    function __() { this.constructor = d; }
-	    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-	};
-	var React = __webpack_require__(1);
-	var sparqlJson_1 = __webpack_require__(159);
-	var queries_1 = __webpack_require__(160);
-	var endpoint = 'https://query.wikidata.org/bigdata/namespace/wdq/sparql';
-	var myMap;
-	var Occupation = (function (_super) {
-	    __extends(Occupation, _super);
-	    function Occupation() {
-	        _super.apply(this, arguments);
-	        this.state = { occupation: 'scientist', limit: 20, countries: [] };
-	    }
-	    Occupation.prototype.componentDidMount = function () {
-	        window.ymaps.ready(function () {
-	            myMap = new window.ymaps.Map('map', {
-	                center: [40, 0],
-	                zoom: 1
-	            });
-	        });
-	    };
-	    Occupation.prototype.search = function () {
-	        var query = queries_1.birthPlaceForOccupation(this.state.occupation, this.state.limit);
-	        sparqlJson_1.sparqlQueryJson(endpoint, query, function (data) {
-	            myMap.geoObjects.removeAll();
-	            console.log(data);
-	            for (var _i = 0, _a = JSON.parse(data).results.bindings; _i < _a.length; _i++) {
-	                var hum = _a[_i];
-	                var coords = [parseFloat(hum.lat.value), parseFloat(hum.long.value)];
-	                var name_1 = hum.label.value;
-	                var personLink = hum.subj.value;
-	                var photoSrc = hum.picture.value;
-	                var myPlacemark = new window.ymaps.GeoObject({
-	                    geometry: {
-	                        type: 'Point',
-	                        coordinates: coords
-	                    },
-	                    properties: {
-	                        balloonContent: ("<span>\n                              <a href=\"" + personLink + "\" target=\"_blank\">\n                                  " + name_1 + "\n                                  <img style=\"width: 60px\" src=\"" + photoSrc + "\" />\n                              </a>\n                          </span>")
-	                    }
-	                });
-	                myMap.geoObjects.add(myPlacemark);
-	            }
-	        });
-	    };
-	    Occupation.prototype.onInputChangeHandler = function (newVal) {
-	        this.setState({
-	            occupation: newVal
-	        });
-	    };
-	    Occupation.prototype.onLimitInputChangeHandler = function (newLimit) {
-	        this.setState({ limit: newLimit });
-	    };
-	    Occupation.prototype.shouldComponentUpdate = function () {
-	        return false;
-	    };
-	    Occupation.prototype.render = function () {
-	        var _this = this;
-	        return (React.createElement("div", null, React.createElement("h3", null, "Write occupation"), React.createElement("input", {value: this.state.limit, type: "number", onChange: function (e) { return _this.onLimitInputChangeHandler(e.target.value); }}), React.createElement("input", {value: this.state.occupation, onChange: function (e) { return _this.onInputChangeHandler(e.target.value); }}), React.createElement("button", {onClick: function () { return _this.search(); }}, " Search"), React.createElement("select", null, this.state.countries.map(function (country) {
-	            return React.createElement("option", null);
-	        })), React.createElement("div", {id: "map", style: { width: '600px', height: '400px' }})));
-	    };
-	    return Occupation;
-	}(React.Component));
-	exports.Occupation = Occupation;
-
-
-/***/ },
-/* 162 */
-/***/ function(module, exports, __webpack_require__) {
-
-	"use strict";
-	var __extends = (this && this.__extends) || function (d, b) {
-	    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-	    function __() { this.constructor = d; }
-	    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-	};
-	var React = __webpack_require__(1);
-	var queries_1 = __webpack_require__(160);
-	var PlacesInFrame = (function (_super) {
-	    __extends(PlacesInFrame, _super);
-	    function PlacesInFrame() {
-	        _super.apply(this, arguments);
-	        this.frame = {
-	            minLatitude: 38.885922015773524,
-	            maxLatitude: 38.897708018277825,
-	            minLongetude: -77.04574584960938,
-	            maxLongitude: -77.02173709869385
-	        };
-	        this.markers = [];
-	    }
-	    PlacesInFrame.prototype.componentDidMount = function () {
-	        var _this = this;
-	        this.map = new window.google.maps.Map(document.getElementById('gmap'), {
-	            center: { lat: (this.frame.maxLatitude + this.frame.minLatitude) / 2, lng: (this.frame.maxLongitude + this.frame.minLongetude) / 2 },
-	            zoom: 13
-	        });
-	        var rectangle = new google.maps.Rectangle({
-	            bounds: new google.maps.LatLngBounds(new google.maps.LatLng(this.frame.minLatitude, this.frame.minLongetude), new google.maps.LatLng(this.frame.maxLatitude, this.frame.maxLongitude)),
-	            editable: true,
-	            draggable: true
-	        });
-	        rectangle.addListener('bounds_changed', function () {
-	            var bounds = rectangle.getBounds();
-	            _this.frame = {
-	                maxLatitude: bounds.getNorthEast().lat(),
-	                minLatitude: bounds.getSouthWest().lat(),
-	                maxLongitude: bounds.getNorthEast().lng(),
-	                minLongetude: bounds.getSouthWest().lng()
-	            };
-	        });
-	        rectangle.setMap(this.map);
-	        this.search();
-	    };
-	    PlacesInFrame.prototype.clearMarkers = function () {
-	        this.markers.forEach(function (marker) {
-	            marker.setMap(null);
-	        });
-	        this.markers = [];
-	    };
-	    PlacesInFrame.prototype.search = function () {
-	        var _this = this;
-	        queries_1.getPlacesByGeoFrame(this.frame, 40, function (places) {
-	            _this.clearMarkers();
-	            var _loop_1 = function(place) {
-	                var coords = [parseFloat(place.lat.value), parseFloat(place.long.value)];
-	                var infowindow = new google.maps.InfoWindow;
-	                infowindow.setContent("<span>\n                        <a href=\"" + place.item.value + "\"> " + place.name.value + " </a>\n                    </span>");
-	                var marker = new google.maps.Marker({
-	                    position: { lat: coords[0], lng: coords[1] },
-	                    map: _this.map,
-	                    title: 'Hello World!'
-	                });
-	                marker.addListener('click', function () {
-	                    infowindow.open(this.map, marker);
-	                });
-	                _this.markers.push(marker);
-	            };
-	            for (var _i = 0, places_1 = places; _i < places_1.length; _i++) {
-	                var place = places_1[_i];
-	                _loop_1(place);
-	            }
-	        });
-	    };
-	    PlacesInFrame.prototype.render = function () {
-	        var _this = this;
-	        return (React.createElement("div", null, React.createElement("h3", null, "Museums in frame"), React.createElement("button", {onClick: function () { return _this.search(); }}, "Search"), React.createElement("div", {id: "gmap", style: { width: '600px', height: '400px' }})));
-	    };
-	    return PlacesInFrame;
-	}(React.Component));
-	exports.PlacesInFrame = PlacesInFrame;
 
 
 /***/ }
