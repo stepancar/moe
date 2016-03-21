@@ -1,8 +1,9 @@
 import * as React from 'react';
 import {getPlacesByGeoFrame, GeoFrame} from '../queries';
 declare var google: any;
-
-export class PlacesInFrame extends React.Component<{}, {}> {
+import {Loader} from '../components/loader';
+export class PlacesInFrame extends React.Component<{}, { isInProgress: boolean; }> {
+    state = { isInProgress: false }
     private frame: GeoFrame = {
         minLatitude: 38.885922015773524,
         maxLatitude: 38.897708018277825,
@@ -24,6 +25,29 @@ export class PlacesInFrame extends React.Component<{}, {}> {
             editable: true,
             draggable: true
         });
+        /**
+        * Click to map should set center of rectangle to point where clicked
+        */
+        this.map.addListener('click', (e) => {
+            const centerLat = e.latLng.lat();
+            const centerLng = e.latLng.lng();
+            const latDiff = (this.frame.maxLatitude - this.frame.minLatitude) / 2;
+            const lngDiff = (this.frame.maxLongitude - this.frame.minLongetude) / 2;
+            const newMaxLatitude = centerLat + latDiff;
+            const newMaxLongetude = centerLng + lngDiff;
+            const newMinLatitude = centerLat - latDiff;
+            const newMinLongetude = centerLng - lngDiff;
+            rectangle.setBounds(new google.maps.LatLngBounds(
+                new google.maps.LatLng(newMinLatitude, newMinLongetude),
+                new google.maps.LatLng(newMaxLatitude, newMaxLongetude)
+            ));
+            this.frame = {
+                maxLatitude: newMaxLatitude,
+                minLatitude: newMinLatitude,
+                maxLongitude: newMaxLongetude,
+                minLongetude: newMinLongetude
+            };
+        });
         rectangle.addListener('bounds_changed', () => {
             let bounds = rectangle.getBounds();
             this.frame = {
@@ -44,33 +68,39 @@ export class PlacesInFrame extends React.Component<{}, {}> {
         this.markers = [];
     }
     search() {
-        getPlacesByGeoFrame(this.frame, 40, (places) => {
-            this.clearMarkers();
-            for (let place of places) {
-                const coords = [parseFloat(place.lat.value), parseFloat(place.long.value)];
-                const infowindow = new google.maps.InfoWindow;
-                infowindow.setContent(
-                    `<span>
+        this.setState({ isInProgress: true }, () =>
+            getPlacesByGeoFrame(this.frame, 40, (places) => {
+                this.setState({ isInProgress: false });
+                this.clearMarkers();
+                for (let place of places) {
+                    const coords = [parseFloat(place.lat.value), parseFloat(place.long.value)];
+                    const infowindow = new google.maps.InfoWindow;
+                    infowindow.setContent(
+                        `<span>
                         <a href="${place.item.value}"> ${place.name.value} </a>
                     </span>`
-                );
-                let marker = new google.maps.Marker({
-                    position: { lat: coords[0], lng: coords[1] },
-                    map: this.map,
-                    title: 'Hello World!'
-                });
-                marker.addListener('click', function() {
-                    infowindow.open(this.map, marker);
-                });
-                this.markers.push(marker);
-            }
-        });
+                    );
+                    let marker = new google.maps.Marker({
+                        position: { lat: coords[0], lng: coords[1] },
+                        map: this.map,
+                        title: 'Hello World!'
+                    });
+                    marker.addListener('click', function() {
+                        infowindow.open(this.map, marker);
+                    });
+                    this.markers.push(marker);
+                }
+            }));
+
     }
     render() {
         return (
             <div>
                 <h3>Museums in frame</h3>
                 <button onClick={() => this.search() }>Search</button>
+                {this.state.isInProgress ?
+                    <Loader/> : false
+                }
                 <div id="gmap" style={{ width: '600px', height: '400px' }}></div>
             </div>
         );

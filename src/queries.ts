@@ -9,6 +9,16 @@ const prefixes = 'PREFIX wd: <http://www.wikidata.org/entity/>\n' +
     'PREFIX q: <http://www.wikidata.org/prop/qualifier/>\n' +
     'PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n';
 
+export function getProffessionsList(callback) {
+    const query = `
+     SELECT DISTINCT * WHERE {
+        ?subj wdt:P31 wd:Q28640 .
+        ?subj rdfs:label ?label filter (lang(?label) = 'en')
+
+     }
+    `;
+    sparqlQueryJson(wikiDataEndPoint, query, (data) => callback(JSON.parse(data).results.bindings));
+}
 export function birthPlaceForOccupation(occupation: string, limit = 20) {
     return (
         prefixes +

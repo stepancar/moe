@@ -19712,6 +19712,11 @@
 	    'PREFIX v: <http://www.wikidata.org/prop/statement/>\n' +
 	    'PREFIX q: <http://www.wikidata.org/prop/qualifier/>\n' +
 	    'PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n';
+	function getProffessionsList(callback) {
+	    var query = "\n     SELECT DISTINCT * WHERE {\n        ?subj wdt:P31 wd:Q28640 .\n        ?subj rdfs:label ?label filter (lang(?label) = 'en')\n\n     }\n    ";
+	    sparqlJson_1.sparqlQueryJson(wikiDataEndPoint, query, function (data) { return callback(JSON.parse(data).results.bindings); });
+	}
+	exports.getProffessionsList = getProffessionsList;
 	function birthPlaceForOccupation(occupation, limit) {
 	    if (limit === void 0) { limit = 20; }
 	    return (prefixes +
@@ -19743,44 +19748,55 @@
 	var React = __webpack_require__(1);
 	var sparqlJson_1 = __webpack_require__(159);
 	var queries_1 = __webpack_require__(160);
+	var loader_1 = __webpack_require__(163);
 	var endpoint = 'https://query.wikidata.org/bigdata/namespace/wdq/sparql';
 	var myMap;
 	var Occupation = (function (_super) {
 	    __extends(Occupation, _super);
 	    function Occupation() {
 	        _super.apply(this, arguments);
-	        this.state = { occupation: 'scientist', limit: 20, countries: [] };
+	        this.state = { occupation: 'scientist', limit: 20, countries: [], isInProgress: false, occupations: [] };
 	    }
 	    Occupation.prototype.componentDidMount = function () {
+	        var _this = this;
 	        window.ymaps.ready(function () {
 	            myMap = new window.ymaps.Map('map', {
 	                center: [40, 0],
 	                zoom: 1
 	            });
 	        });
+	        queries_1.getProffessionsList(function (professions) {
+	            _this.setState({
+	                occupations: professions.map(function (prof) { return prof.label.value; })
+	            });
+	        });
 	    };
 	    Occupation.prototype.search = function () {
+	        var _this = this;
 	        var query = queries_1.birthPlaceForOccupation(this.state.occupation, this.state.limit);
-	        sparqlJson_1.sparqlQueryJson(endpoint, query, function (data) {
-	            myMap.geoObjects.removeAll();
-	            console.log(data);
-	            for (var _i = 0, _a = JSON.parse(data).results.bindings; _i < _a.length; _i++) {
-	                var hum = _a[_i];
-	                var coords = [parseFloat(hum.lat.value), parseFloat(hum.long.value)];
-	                var name_1 = hum.label.value;
-	                var personLink = hum.subj.value;
-	                var photoSrc = hum.picture.value;
-	                var myPlacemark = new window.ymaps.GeoObject({
-	                    geometry: {
-	                        type: 'Point',
-	                        coordinates: coords
-	                    },
-	                    properties: {
-	                        balloonContent: ("<span>\n                              <a href=\"" + personLink + "\" target=\"_blank\">\n                                  " + name_1 + "\n                                  <img style=\"width: 60px\" src=\"" + photoSrc + "\" />\n                              </a>\n                          </span>")
-	                    }
-	                });
-	                myMap.geoObjects.add(myPlacemark);
-	            }
+	        this.setState({ isInProgress: true }, function () {
+	            return sparqlJson_1.sparqlQueryJson(endpoint, query, function (data) {
+	                _this.setState({ isInProgress: false });
+	                myMap.geoObjects.removeAll();
+	                console.log(data);
+	                for (var _i = 0, _a = JSON.parse(data).results.bindings; _i < _a.length; _i++) {
+	                    var hum = _a[_i];
+	                    var coords = [parseFloat(hum.lat.value), parseFloat(hum.long.value)];
+	                    var name_1 = hum.label.value;
+	                    var personLink = hum.subj.value;
+	                    var photoSrc = hum.picture.value;
+	                    var myPlacemark = new window.ymaps.GeoObject({
+	                        geometry: {
+	                            type: 'Point',
+	                            coordinates: coords
+	                        },
+	                        properties: {
+	                            balloonContent: ("<span>\n                              <a href=\"" + personLink + "\" target=\"_blank\">\n                                  " + name_1 + "\n                                  <img style=\"width: 60px\" src=\"" + photoSrc + "\" />\n                              </a>\n                          </span>")
+	                        }
+	                    });
+	                    myMap.geoObjects.add(myPlacemark);
+	                }
+	            });
 	        });
 	    };
 	    Occupation.prototype.onInputChangeHandler = function (newVal) {
@@ -19791,14 +19807,12 @@
 	    Occupation.prototype.onLimitInputChangeHandler = function (newLimit) {
 	        this.setState({ limit: newLimit });
 	    };
-	    Occupation.prototype.shouldComponentUpdate = function () {
-	        return false;
-	    };
 	    Occupation.prototype.render = function () {
 	        var _this = this;
-	        return (React.createElement("div", null, React.createElement("h3", null, "Write occupation"), React.createElement("input", {value: this.state.limit, type: "number", onChange: function (e) { return _this.onLimitInputChangeHandler(e.target.value); }}), React.createElement("input", {value: this.state.occupation, onChange: function (e) { return _this.onInputChangeHandler(e.target.value); }}), React.createElement("button", {onClick: function () { return _this.search(); }}, " Search"), React.createElement("select", null, this.state.countries.map(function (country) {
-	            return React.createElement("option", null);
-	        })), React.createElement("div", {id: "map", style: { width: '600px', height: '400px' }})));
+	        return (React.createElement("div", null, React.createElement("h3", null, "Write occupation"), React.createElement("input", {value: this.state.limit, type: "number", onChange: function (e) { return _this.onLimitInputChangeHandler(e.target.value); }}), React.createElement("select", {onChange: function (e) { return _this.onInputChangeHandler(e.target.value); }}, this.state.occupations.map(function (occupation) {
+	            return React.createElement("option", null, occupation);
+	        })), React.createElement("button", {onClick: function () { return _this.search(); }}, " Search"), this.state.isInProgress ?
+	            React.createElement(loader_1.Loader, null) : false, React.createElement("div", {id: "map", style: { width: '600px', height: '400px' }})));
 	    };
 	    return Occupation;
 	}(React.Component));
@@ -19817,10 +19831,12 @@
 	};
 	var React = __webpack_require__(1);
 	var queries_1 = __webpack_require__(160);
+	var loader_1 = __webpack_require__(163);
 	var PlacesInFrame = (function (_super) {
 	    __extends(PlacesInFrame, _super);
 	    function PlacesInFrame() {
 	        _super.apply(this, arguments);
+	        this.state = { isInProgress: false };
 	        this.frame = {
 	            minLatitude: 38.885922015773524,
 	            maxLatitude: 38.897708018277825,
@@ -19839,6 +19855,23 @@
 	            bounds: new google.maps.LatLngBounds(new google.maps.LatLng(this.frame.minLatitude, this.frame.minLongetude), new google.maps.LatLng(this.frame.maxLatitude, this.frame.maxLongitude)),
 	            editable: true,
 	            draggable: true
+	        });
+	        this.map.addListener('click', function (e) {
+	            var centerLat = e.latLng.lat();
+	            var centerLng = e.latLng.lng();
+	            var latDiff = (_this.frame.maxLatitude - _this.frame.minLatitude) / 2;
+	            var lngDiff = (_this.frame.maxLongitude - _this.frame.minLongetude) / 2;
+	            var newMaxLatitude = centerLat + latDiff;
+	            var newMaxLongetude = centerLng + lngDiff;
+	            var newMinLatitude = centerLat - latDiff;
+	            var newMinLongetude = centerLng - lngDiff;
+	            rectangle.setBounds(new google.maps.LatLngBounds(new google.maps.LatLng(newMinLatitude, newMinLongetude), new google.maps.LatLng(newMaxLatitude, newMaxLongetude)));
+	            _this.frame = {
+	                maxLatitude: newMaxLatitude,
+	                minLatitude: newMinLatitude,
+	                maxLongitude: newMaxLongetude,
+	                minLongetude: newMinLongetude
+	            };
 	        });
 	        rectangle.addListener('bounds_changed', function () {
 	            var bounds = rectangle.getBounds();
@@ -19860,35 +19893,63 @@
 	    };
 	    PlacesInFrame.prototype.search = function () {
 	        var _this = this;
-	        queries_1.getPlacesByGeoFrame(this.frame, 40, function (places) {
-	            _this.clearMarkers();
-	            var _loop_1 = function(place) {
-	                var coords = [parseFloat(place.lat.value), parseFloat(place.long.value)];
-	                var infowindow = new google.maps.InfoWindow;
-	                infowindow.setContent("<span>\n                        <a href=\"" + place.item.value + "\"> " + place.name.value + " </a>\n                    </span>");
-	                var marker = new google.maps.Marker({
-	                    position: { lat: coords[0], lng: coords[1] },
-	                    map: _this.map,
-	                    title: 'Hello World!'
-	                });
-	                marker.addListener('click', function () {
-	                    infowindow.open(this.map, marker);
-	                });
-	                _this.markers.push(marker);
-	            };
-	            for (var _i = 0, places_1 = places; _i < places_1.length; _i++) {
-	                var place = places_1[_i];
-	                _loop_1(place);
-	            }
+	        this.setState({ isInProgress: true }, function () {
+	            return queries_1.getPlacesByGeoFrame(_this.frame, 40, function (places) {
+	                _this.setState({ isInProgress: false });
+	                _this.clearMarkers();
+	                var _loop_1 = function(place) {
+	                    var coords = [parseFloat(place.lat.value), parseFloat(place.long.value)];
+	                    var infowindow = new google.maps.InfoWindow;
+	                    infowindow.setContent("<span>\n                        <a href=\"" + place.item.value + "\"> " + place.name.value + " </a>\n                    </span>");
+	                    var marker = new google.maps.Marker({
+	                        position: { lat: coords[0], lng: coords[1] },
+	                        map: _this.map,
+	                        title: 'Hello World!'
+	                    });
+	                    marker.addListener('click', function () {
+	                        infowindow.open(this.map, marker);
+	                    });
+	                    _this.markers.push(marker);
+	                };
+	                for (var _i = 0, places_1 = places; _i < places_1.length; _i++) {
+	                    var place = places_1[_i];
+	                    _loop_1(place);
+	                }
+	            });
 	        });
 	    };
 	    PlacesInFrame.prototype.render = function () {
 	        var _this = this;
-	        return (React.createElement("div", null, React.createElement("h3", null, "Museums in frame"), React.createElement("button", {onClick: function () { return _this.search(); }}, "Search"), React.createElement("div", {id: "gmap", style: { width: '600px', height: '400px' }})));
+	        return (React.createElement("div", null, React.createElement("h3", null, "Museums in frame"), React.createElement("button", {onClick: function () { return _this.search(); }}, "Search"), this.state.isInProgress ?
+	            React.createElement(loader_1.Loader, null) : false, React.createElement("div", {id: "gmap", style: { width: '600px', height: '400px' }})));
 	    };
 	    return PlacesInFrame;
 	}(React.Component));
 	exports.PlacesInFrame = PlacesInFrame;
+
+
+/***/ },
+/* 163 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+	var __extends = (this && this.__extends) || function (d, b) {
+	    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+	    function __() { this.constructor = d; }
+	    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+	};
+	var React = __webpack_require__(1);
+	var Loader = (function (_super) {
+	    __extends(Loader, _super);
+	    function Loader() {
+	        _super.apply(this, arguments);
+	    }
+	    Loader.prototype.render = function () {
+	        return (React.createElement("img", {src: "img/loader.gif"}));
+	    };
+	    return Loader;
+	}(React.Component));
+	exports.Loader = Loader;
 
 
 /***/ }
