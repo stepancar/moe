@@ -19720,8 +19720,8 @@
 	exports.birthPlaceForOccupation = birthPlaceForOccupation;
 	function getPlacesByGeoFrame(geoFrame, limit, callback) {
 	    if (limit === void 0) { limit = 20; }
-	    var query = prefixes + ("\n\n        SELECT ?subj ?lat ?long ?label ?place ?occupationLabel ?occupation ?picture WHERE {\n           ?subj wdt:P106 ?occupation .\n           ?occupation rdfs:label ?occupationLabel filter (lang(?occupationLabel) = 'en') .\n           ?subj wdt:P19 ?place .\n           ?place p:P625 ?coordinate .\n           ?coordinate psv:P625 ?coordinate_node .\n           ?coordinate_node wikibase:geoLatitude ?lat\n             filter (\n               ?lat>" + geoFrame.minLatitude + " && ?lat<" + geoFrame.maxLatitude + " &&\n               ?long>" + geoFrame.minLongetude + " && ?long<" + geoFrame.maxLongitude + "\n             ).\n           ?coordinate_node wikibase:geoLongitude ?long .\n           ?subj wdt:P18 ?picture .\n           ?subj rdfs:label ?label filter (lang(?label) = 'en')\n        }\n        LIMIT " + limit);
-	    sparqlJson_1.sparqlQueryJson(wikiDataEndPoint, query, function (data) { return JSON.parse(data).results.bindings; });
+	    var query = prefixes + ("\n\n      SELECT DISTINCT ?item ?name ?coord ?lat ?long WHERE {\n         ?item wdt:P131* wd:Q61 .\n         ?item wdt:P31/wdt:P279* wd:Q33506 .\n         ?item wdt:P625 ?coord .\n         ?item p:P625 ?coordinate .\n         ?coordinate psv:P625 ?coordinate_node .\n         ?coordinate_node wikibase:geoLatitude ?lat .\n         ?coordinate_node wikibase:geoLongitude ?long .\n           filter (\n             ?lat>" + geoFrame.minLatitude + " && ?lat<" + geoFrame.maxLatitude + " &&\n             ?long>" + geoFrame.minLongetude + " && ?long<" + geoFrame.maxLongitude + "\n           ).\n          SERVICE wikibase:label {\n            bd:serviceParam wikibase:language \"en\" .\n            ?item rdfs:label ?name\n          }\n        }\n        ORDER BY ASC (?name)\n        #LIMIT " + limit);
+	    sparqlJson_1.sparqlQueryJson(wikiDataEndPoint, query, function (data) { return callback(JSON.parse(data).results.bindings); });
 	}
 	exports.getPlacesByGeoFrame = getPlacesByGeoFrame;
 	function countries() {
@@ -19752,13 +19752,11 @@
 	        this.state = { occupation: 'scientist', limit: 20, countries: [] };
 	    }
 	    Occupation.prototype.componentDidMount = function () {
-	        var _this = this;
 	        window.ymaps.ready(function () {
 	            myMap = new window.ymaps.Map('map', {
 	                center: [40, 0],
 	                zoom: 1
 	            });
-	            _this.search();
 	        });
 	    };
 	    Occupation.prototype.search = function () {
@@ -19824,18 +19822,18 @@
 	    function PlacesInFrame() {
 	        _super.apply(this, arguments);
 	        this.frame = {
-	            minLatitude: 0,
-	            maxLatitude: 40,
-	            minLongetude: 0,
-	            maxLongitude: 50
+	            minLatitude: 38.885922015773524,
+	            maxLatitude: 38.897708018277825,
+	            minLongetude: -77.04574584960938,
+	            maxLongitude: -77.02173709869385
 	        };
 	        this.markers = [];
 	    }
 	    PlacesInFrame.prototype.componentDidMount = function () {
 	        var _this = this;
 	        this.map = new window.google.maps.Map(document.getElementById('gmap'), {
-	            center: { lat: 40, lng: 0 },
-	            zoom: 1
+	            center: { lat: (this.frame.maxLatitude + this.frame.minLatitude) / 2, lng: (this.frame.maxLongitude + this.frame.minLongetude) / 2 },
+	            zoom: 13
 	        });
 	        var rectangle = new google.maps.Rectangle({
 	            bounds: new google.maps.LatLngBounds(new google.maps.LatLng(this.frame.minLatitude, this.frame.minLongetude), new google.maps.LatLng(this.frame.maxLatitude, this.frame.maxLongitude)),
@@ -19864,21 +19862,29 @@
 	        var _this = this;
 	        queries_1.getPlacesByGeoFrame(this.frame, 40, function (places) {
 	            _this.clearMarkers();
-	            for (var _i = 0, places_1 = places; _i < places_1.length; _i++) {
-	                var place = places_1[_i];
+	            var _loop_1 = function(place) {
 	                var coords = [parseFloat(place.lat.value), parseFloat(place.long.value)];
+	                var infowindow = new google.maps.InfoWindow;
+	                infowindow.setContent("<span>\n                        <a href=\"" + place.item.value + "\"> " + place.name.value + " </a>\n                    </span>");
 	                var marker = new google.maps.Marker({
 	                    position: { lat: coords[0], lng: coords[1] },
 	                    map: _this.map,
 	                    title: 'Hello World!'
 	                });
+	                marker.addListener('click', function () {
+	                    infowindow.open(this.map, marker);
+	                });
 	                _this.markers.push(marker);
+	            };
+	            for (var _i = 0, places_1 = places; _i < places_1.length; _i++) {
+	                var place = places_1[_i];
+	                _loop_1(place);
 	            }
 	        });
 	    };
 	    PlacesInFrame.prototype.render = function () {
 	        var _this = this;
-	        return (React.createElement("div", null, React.createElement("button", {onClick: function () { return _this.search(); }}, "Search"), React.createElement("div", {id: "gmap", style: { width: '600px', height: '400px' }})));
+	        return (React.createElement("div", null, React.createElement("h3", null, "Museums in frame"), React.createElement("button", {onClick: function () { return _this.search(); }}, "Search"), React.createElement("div", {id: "gmap", style: { width: '600px', height: '400px' }})));
 	    };
 	    return PlacesInFrame;
 	}(React.Component));
